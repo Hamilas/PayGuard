@@ -1,0 +1,9 @@
+project: fraud_detection
+registry: s3://mlops-feature-store-YOUR_SUFFIX/feast/registry.pb
+provider: aws
+online_store:
+  type: redis
+  connection_string: "10.43.86.87:6379"
+offline_store:
+  type: file
+entity_key_serialization_version: 2

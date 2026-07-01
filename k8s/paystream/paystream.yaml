@@ -1,0 +1,88 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: paystream
+  namespace: paystream
+  labels:
+    app: paystream
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: paystream
+  template:
+    metadata:
+      labels:
+        app: paystream
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "8001"
+        prometheus.io/path:   "/metrics"
+    spec:
+      initContainers:
+      - name: copy-code
+        image: busybox:1.28
+        command: ['sh', '-c', 'cp /src/paystream.py /app/paystream.py']
+        volumeMounts:
+        - name: source-code
+          mountPath: /src
+        - name: app-code
+          mountPath: /app
+      containers:
+      - name: paystream
+        image: python:3.11-slim
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          pip install fastapi uvicorn httpx prometheus-client \
+              -q --no-cache-dir && \
+          cd /app && python paystream.py
+        env:
+        - name: FRAUD_API_URL
+          value: "http://fraud-api.mlops.svc.cluster.local:8000"
+        - name: MODE
+          value: "normal"
+        ports:
+        - containerPort: 8001
+          name: http
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 300m
+            memory: 256Mi
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8001
+          initialDelaySeconds: 60
+          periodSeconds: 10
+          failureThreshold: 6
+      volumes:
+      - name: source-code
+        configMap:
+          name: paystream-code
+      - name: app-code
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: paystream
+  namespace: paystream
+  labels:
+    app: paystream
+spec:
+  type: NodePort
+  selector:
+    app: paystream
+  ports:
+  - port: 8001
+    targetPort: 8001
+    nodePort: 32003
+    name: http

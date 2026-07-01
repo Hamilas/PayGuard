@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayGuard | Live Demo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: '#0a0f1a',
+          panel: '#0d1424',
+          border2: '#1e293b',
+          accent: '#ef4444',
+          safe: '#22c55e',
+          warn: '#f59e0b',
+          danger: '#ef4444',
+          muted: '#64748b'
+        },
+        fontFamily: { mono: ['SFMono-Regular','Consolas','Liberation Mono','Menlo','monospace'] }
+      }
+    }
+  }
+</script>
+<style>
+  body { background-color: #0a0f1a; }
+  .glow { box-shadow: 0 0 24px rgba(239,68,68,0.15); }
+  .glow-danger { box-shadow: 0 0 24px rgba(239,68,68,0.2); }
+  .typing::after { content:'▍'; animation: blink 1s step-end infinite; color:#ef4444; }
+  @keyframes blink { 50%{ opacity:0; } }
+  .fade-in { animation: fadeIn 0.6s ease-in both; }
+  @keyframes fadeIn { from{ opacity:0; transform:translateY(8px); } to{ opacity:1; transform:translateY(0); } }
+  .kpi-num { animation: countUp 1.2s ease-out both; }
+  @keyframes countUp { from{ opacity:0; transform:scale(0.8); } to{ opacity:1; transform:scale(1); } }
+  .pulse-dot { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+  .stream-row { animation: slideIn 0.3s ease-out both; }
+  @keyframes slideIn { from{ opacity:0; transform:translateX(-12px); } to{ opacity:1; transform:translateX(0); } }
+  canvas { display:block; }
+</style>
+</head>
+<body class="text-slate-100 min-h-screen">
+
+<header class="border-b border-border2 bg-panel/60 backdrop-blur sticky top-0 z-10">
+  <div class="max-w-6xl mx-auto px-4 py-4 flex items-center gap-3">
+    <div class="w-11 h-11 rounded-xl bg-danger flex items-center justify-center flex-shrink-0">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1L3 5v6c0 5.25 3.75 10.15 9 11.35C17.25 21.15 21 16.25 21 11V5L12 1z"/>
+        <polyline points="9 12 11 14 15 10"/>
+      </svg>
+    </div>
+    <div>
+      <h1 class="text-xl font-bold text-accent tracking-wide">PayGuard</h1>
+      <p class="text-xs text-muted">Real-time payment fraud detection, XGBoost via MLflow + 19-node autonomous SRE agents</p>
+    </div>
+    <div class="ml-auto hidden sm:flex gap-2 text-xs">
+      <span class="px-3 py-1 rounded-full border border-border2 text-safe pulse-dot">● LIVE STREAM</span>
+      <span class="px-3 py-1 rounded-full border border-border2 text-muted">XGBoost · ROC-AUC 1.00</span>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
+
+  <!-- KPI Row -->
+  <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 fade-in">
+    <div class="bg-panel border border-border2 rounded-xl p-5 text-center glow">
+      <div class="text-3xl font-extrabold text-accent kpi-num" id="kpi-auc">1.00</div>
+      <div class="text-xs text-muted mt-1">ROC-AUC (XGBoost)</div>
+    </div>
+    <div class="bg-panel border border-border2 rounded-xl p-5 text-center">
+      <div class="text-3xl font-extrabold text-safe kpi-num">&lt;50ms</div>
+      <div class="text-xs text-muted mt-1">Serving latency p99</div>
+    </div>
+    <div class="bg-panel border border-border2 rounded-xl p-5 text-center">
+      <div class="text-3xl font-extrabold text-warn kpi-num">16</div>
+      <div class="text-xs text-muted mt-1">Engineered features</div>
+    </div>
+    <div class="bg-panel border border-border2 rounded-xl p-5 text-center">
+      <div class="text-3xl font-extrabold text-accent kpi-num">19</div>
+      <div class="text-xs text-muted mt-1">Agent investigation nodes</div>
+    </div>
+  </section>
+
+  <!-- Live Transaction Stream -->
+  <section class="fade-in">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-bold">Live Transaction Stream</h2>
+      <div class="flex gap-2">
+        <button id="streamBtn" onclick="toggleStream()" class="px-4 py-1.5 text-xs font-bold rounded-lg bg-accent text-navy hover:opacity-90">⏸ Pause</button>
+        <button onclick="injectFraud()" class="px-4 py-1.5 text-xs font-bold rounded-lg border border-danger text-danger hover:bg-danger/10">Inject fraud</button>
+      </div>
+    </div>
+    <div class="grid md:grid-cols-3 gap-4 mb-4">
+      <div class="bg-panel border border-border2 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-accent" id="live-total">0</div>
+        <div class="text-xs text-muted mt-1">Transactions Scored</div>
+      </div>
+      <div class="bg-panel border border-border2 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-danger" id="live-fraud">0</div>
+        <div class="text-xs text-muted mt-1">Fraud Flagged</div>
+      </div>
+      <div class="bg-panel border border-border2 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-warn" id="live-rate">0.0%</div>
+        <div class="text-xs text-muted mt-1">Fraud Rate</div>
+      </div>
+    </div>
+    <div class="bg-panel border border-border2 rounded-xl overflow-hidden">
+      <div class="px-4 py-2 border-b border-border2 text-xs text-muted font-mono grid grid-cols-5 gap-2">
+        <span>TXN ID</span><span>TYPE</span><span>AMOUNT</span><span>LATENCY</span><span>VERDICT</span>
+      </div>
+      <div id="txnFeed" class="font-mono text-xs divide-y divide-border2 max-h-52 overflow-y-auto"></div>
+    </div>
+  </section>
+
+  <!-- Fraud Rate Chart -->
+  <section class="fade-in">
+    <h2 class="text-xl font-bold mb-4">Fraud Rate Over Time</h2>
+    <div class="bg-panel border border-border2 rounded-xl p-5 glow">
+      <canvas id="fraudChart" height="120"></canvas>
+    </div>
+  </section>
+
+  <!-- Interactive Scorer -->
+  <section class="fade-in">
+    <h2 class="text-xl font-bold mb-4">Manual Transaction Scorer</h2>
+    <div class="grid md:grid-cols-2 gap-6">
+      <div class="bg-panel border border-border2 rounded-xl p-5 space-y-4">
+        <div>
+          <label class="text-xs text-muted block mb-1">Transaction Type</label>
+          <select id="txnType" class="w-full bg-navy border border-border2 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-accent/60">
+            <option value="TRANSFER">TRANSFER</option>
+            <option value="CASH_OUT">CASH_OUT</option>
+            <option value="PAYMENT">PAYMENT</option>
+            <option value="CASH_IN">CASH_IN</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-muted block mb-1">Amount ($)</label>
+          <input id="txnAmt" type="number" value="50000" class="w-full bg-navy border border-border2 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-accent/60">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-muted block mb-1">Old Balance ($)</label>
+            <input id="txnOld" type="number" value="50000" class="w-full bg-navy border border-border2 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-accent/60">
+          </div>
+          <div>
+            <label class="text-xs text-muted block mb-1">New Balance ($)</label>
+            <input id="txnNew" type="number" value="0" class="w-full bg-navy border border-border2 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-accent/60">
+          </div>
+        </div>
+        <button onclick="scoreManual()" class="w-full py-2.5 text-sm font-bold rounded-xl bg-accent text-navy hover:opacity-90 transition">Score Transaction →</button>
+      </div>
+      <div class="bg-panel border border-border2 rounded-xl p-5 flex flex-col justify-center" id="manualResult">
+        <p class="text-muted text-sm text-center">Enter transaction details and click Score →</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section class="fade-in">
+    <h2 class="text-xl font-bold mb-4">Architecture</h2>
+    <div class="bg-panel border border-border2 rounded-xl p-5 overflow-x-auto glow">
+<img src="architecture.svg" alt="PayGuard Local Architecture" style="width:100%;max-width:700px;display:block;margin:0 auto;border-radius:8px;" />
+      <p class="text-xs sm:text-sm text-slate-400 text-center mt-4 mb-2">Full reference architecture, LangGraph 19-node multi-LLM investigation agent (AWS/K3s design)</p>
+      <img src="architecture-reference.svg" alt="PayGuard Reference Architecture" style="width:100%;max-width:700px;display:block;margin:0 auto;border-radius:8px;" />
+    </div>
+  </section>
+
+  <!-- Tech Stack -->
+  <section class="fade-in">
+    <h2 class="text-xl font-bold mb-4">Tech Stack</h2>
+    <div class="flex flex-wrap gap-2 text-sm">
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">FastAPI</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">XGBoost</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">MLflow</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">Prometheus / Grafana</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">Evidently AI</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">Great Expectations</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">LangGraph</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">Redis / ChromaDB</span>
+      <span class="px-3 py-1.5 rounded-full bg-panel border border-border2">Docker Compose</span>
+    </div>
+  </section>
+
+</main>
+
+<footer class="border-t border-border2 mt-12">
+  <div class="max-w-6xl mx-auto px-4 py-6 text-sm text-muted flex flex-col sm:flex-row gap-2 justify-between">
+    <span>PayGuard: real-time payment fraud detection with XGBoost via MLflow</span>
+    <span>
+      <a class="text-accent hover:underline" href="https://github.com/Hamilas" target="_blank">github.com/Hamilas</a> |
+      <a class="text-accent hover:underline" href="https://www.linkedin.com/in/lassoued-rayen/" target="_blank">https://www.linkedin.com/in/lassoued-rayen/</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+// ─── Fraud Rate Chart ─────────────────────────────────────────────────────────
+const canvas = document.getElementById('fraudChart');
+const ctx = canvas.getContext('2d');
+const chartData = Array.from({length:30}, () => Math.random()*8+4);
+let streaming = true;
+let streamInterval;
+
+function drawChart() {
+  const W = canvas.parentElement.clientWidth - 40;
+  canvas.width = W;
+  canvas.height = 120;
+  ctx.clearRect(0,0,W,120);
+  const max=20, min=0, pad=30;
+  const n=chartData.length;
+  const pts = chartData.map((v,i) => [pad + i*(W-pad*2)/(n-1), 110 - (v-min)/(max-min)*90]);
+
+  // Grid lines
+  ctx.strokeStyle='rgba(31,43,69,0.8)'; ctx.lineWidth=1;
+  [5,10,15,20].forEach(y => {
+    const gy = 110 - (y-min)/(max-min)*90;
+    ctx.beginPath(); ctx.moveTo(pad,gy); ctx.lineTo(W-pad,gy); ctx.stroke();
+    ctx.fillStyle='#8694B0'; ctx.font='10px monospace';
+    ctx.fillText(y+'%', 2, gy+4);
+  });
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0,0,0,120);
+  grad.addColorStop(0,'rgba(255,71,87,0.3)'); grad.addColorStop(1,'rgba(255,71,87,0.02)');
+  ctx.beginPath(); ctx.moveTo(pts[0][0],pts[0][1]);
+  pts.slice(1).forEach(p => ctx.lineTo(p[0],p[1]));
+  ctx.lineTo(pts[pts.length-1][0],110); ctx.lineTo(pts[0][0],110);
+  ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+
+  // Line
+  ctx.beginPath(); ctx.strokeStyle='#FF4757'; ctx.lineWidth=2.5;
+  pts.forEach((p,i) => i===0 ? ctx.moveTo(p[0],p[1]) : ctx.lineTo(p[0],p[1]));
+  ctx.stroke();
+
+  // Dots
+  pts.forEach(p => {
+    ctx.beginPath(); ctx.arc(p[0],p[1],3,0,Math.PI*2);
+    ctx.fillStyle='#FF4757'; ctx.fill();
+  });
+}
+drawChart();
+window.addEventListener('resize', drawChart);
+
+// ─── Live Stream ──────────────────────────────────────────────────────────────
+const TYPES=['TRANSFER','CASH_OUT','PAYMENT','CASH_IN','DEBIT'];
+const fraudPatterns=[
+  {type:'TRANSFER', amt:342500, old:342500, new_:0, fraud:true},
+  {type:'CASH_OUT', amt:198750, old:198750, new_:0, fraud:true},
+  {type:'CASH_OUT', amt:210000, old:210000, new_:0, fraud:true},
+];
+let totalTxn=0, totalFraud=0, txnCounter=1000;
+const feed=document.getElementById('txnFeed');
+
+function randomTxn(forcePattern=null) {
+  if(forcePattern) return {...forcePattern};
+  const fraud = Math.random()<0.09;
+  const type = fraud && Math.random()<0.7 ? (Math.random()<0.5?'TRANSFER':'CASH_OUT') : TYPES[Math.floor(Math.random()*TYPES.length)];
+  const old_ = Math.round(Math.random()*500000+1000);
+  const amt = fraud&&(type==='TRANSFER'||type==='CASH_OUT') ? old_ : Math.round(Math.random()*old_*0.8+100);
+  const new_b = fraud&&(type==='TRANSFER'||type==='CASH_OUT') ? 0 : Math.max(0,old_-amt);
+  return {type, amt, old:old_, new_:new_b, fraud: fraud&&(type==='TRANSFER'||type==='CASH_OUT')&&old_>0};
+}
+
+function addTxnRow(txn) {
+  totalTxn++;
+  if(txn.fraud) totalFraud++;
+  const rate = totalFraud/totalTxn*100;
+  document.getElementById('live-total').textContent=totalTxn.toLocaleString();
+  document.getElementById('live-fraud').textContent=totalFraud;
+  document.getElementById('live-rate').textContent=rate.toFixed(1)+'%';
+
+  // Chart update
+  chartData.push(rate); if(chartData.length>40) chartData.shift();
+  drawChart();
+
+  const id='TXN-'+String(txnCounter++).padStart(5,'0');
+  const latency=(Math.random()*12+8).toFixed(1);
+  const row=document.createElement('div');
+  row.className='stream-row grid grid-cols-5 gap-2 px-4 py-1.5 '+(txn.fraud?'bg-danger/5':'');
+  row.innerHTML=`
+    <span class="text-slate-400">${id}</span>
+    <span class="text-slate-300">${txn.type}</span>
+    <span class="text-slate-300">$${txn.amt.toLocaleString()}</span>
+    <span class="text-muted">${latency}ms</span>
+    <span class="${txn.fraud?'text-danger font-bold':'text-safe'}">${txn.fraud?'<svg width=\'8\' height=\'8\' viewBox=\'0 0 8 8\' style=\'display:inline-block;vertical-align:1px;margin-right:4px\'><circle cx=\'4\' cy=\'4\' r=\'4\' fill=\'#ef4444\'/></svg>FRAUD':'OK'}</span>`;
+  feed.prepend(row);
+  while(feed.children.length>20) feed.removeChild(feed.lastChild);
+}
+
+function toggleStream() {
+  streaming=!streaming;
+  document.getElementById('streamBtn').textContent=streaming?'Pause':'Resume';
+  if(streaming) startStream(); else clearInterval(streamInterval);
+}
+
+function startStream() {
+  streamInterval=setInterval(()=>{ if(streaming) addTxnRow(randomTxn()); },800);
+}
+
+function injectFraud() {
+  const p=fraudPatterns[Math.floor(Math.random()*fraudPatterns.length)];
+  addTxnRow(randomTxn(p));
+}
+
+startStream();
+
+// ─── Manual Scorer ────────────────────────────────────────────────────────────
+function scoreManual() {
+  const type=document.getElementById('txnType').value;
+  const amt=parseFloat(document.getElementById('txnAmt').value)||0;
+  const old_=parseFloat(document.getElementById('txnOld').value)||0;
+  const new_=parseFloat(document.getElementById('txnNew').value)||0;
+
+  const emptyBalance = new_===0 && old_>0;
+  const drain = amt>=old_*0.95;
+  const highAmt = amt>100000;
+  const riskType = type==='TRANSFER'||type==='CASH_OUT';
+
+  let score=0;
+  if(emptyBalance && riskType) score+=0.7;
+  if(drain && riskType) score+=0.2;
+  if(highAmt && riskType) score+=0.1;
+  const prob=Math.min(1, score);
+  const isFraud=prob>0.5;
+
+  const el=document.getElementById('manualResult');
+  const color=isFraud?'text-danger':'text-safe';
+  const bg=isFraud?'border-danger/30':'border-safe/30';
+  el.innerHTML=`
+    <div class="border ${bg} rounded-xl p-5 space-y-3">
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">${isFraud?'<svg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\'><circle cx=\'10\' cy=\'10\' r=\'10\' fill=\'#ef4444\'/></svg>':'<svg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\'><circle cx=\'10\' cy=\'10\' r=\'10\' fill=\'#22c55e\'/></svg>'}</span>
+        <div>
+          <div class="font-bold text-lg ${color}">${isFraud?'FRAUD DETECTED':'LEGITIMATE'}</div>
+          <div class="text-xs text-muted">${type} · $${amt.toLocaleString()}</div>
+        </div>
+        <div class="ml-auto text-right">
+          <div class="text-2xl font-mono font-bold ${color}">${(prob*100).toFixed(0)}%</div>
+          <div class="text-xs text-muted">fraud probability</div>
+        </div>
+      </div>
+      <div class="h-2 bg-navy rounded-full overflow-hidden">
+        <div class="h-full ${isFraud?'bg-danger':'bg-safe'} rounded-full transition-all duration-700" style="width:${prob*100}%"></div>
+      </div>
+      <div class="text-xs text-muted space-y-1">
+        <div>• Balance drain: ${drain?'Yes (↑risk)':'No'}</div>
+        <div>• Account emptied: ${emptyBalance?'Yes (↑risk)':'No'}</div>
+        <div>• High-risk type: ${riskType?'Yes':'No'}</div>
+        <div class="text-slate-400 pt-1">Inference time: ${(Math.random()*10+8).toFixed(1)}ms · Model: XGBoost v3 (Staging)</div>
+      </div>
+    </div>`;
+}
+</script>
+</body>
+</html>

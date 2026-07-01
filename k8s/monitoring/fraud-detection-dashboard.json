@@ -1,0 +1,281 @@
+{
+  "title": "Fraud Detection — Model Performance",
+  "uid": "fraud-detection-v1",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-30m", "to": "now" },
+  "tags": ["mlops", "fraud", "serving"],
+  "panels": [
+    {
+      "id": 1,
+      "title": "Model Version Serving",
+      "type": "stat",
+      "gridPos": { "x": 0, "y": 0, "w": 4, "h": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name" },
+      "fieldConfig": {
+        "defaults": { "color": { "mode": "fixed", "fixedColor": "blue" }, "mappings": [], "thresholds": { "mode": "absolute", "steps": [] } }
+      },
+      "targets": [{
+        "expr": "label_replace(fraud_model_info, \"version\", \"$1\", \"model_version\", \"(.*)\")",
+        "legendFormat": "v{{model_version}} ({{model_stage}})",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 2,
+      "title": "Request Rate (RPS)",
+      "type": "stat",
+      "gridPos": { "x": 4, "y": 0, "w": 4, "h": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 5 },
+            { "color": "red", "value": 15 }
+          ]}
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(fraud_api_requests_total{path=\"/predict\"}[1m]))",
+        "legendFormat": "RPS",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 3,
+      "title": "Fraud Detection Rate",
+      "type": "stat",
+      "gridPos": { "x": 8, "y": 0, "w": 4, "h": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 0.05 },
+            { "color": "red", "value": 0.20 }
+          ]}
+        }
+      },
+      "targets": [{
+        "expr": "sum(rate(fraud_predictions_total{result=\"fraud\"}[5m])) / sum(rate(fraud_predictions_total[5m]))",
+        "legendFormat": "Fraud %",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 4,
+      "title": "p99 Latency",
+      "type": "stat",
+      "gridPos": { "x": 12, "y": 0, "w": 4, "h": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ms",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "yellow", "value": 100 },
+            { "color": "red", "value": 500 }
+          ]}
+        }
+      },
+      "targets": [{
+        "expr": "histogram_quantile(0.99, sum(rate(fraud_api_request_duration_seconds_bucket{endpoint=\"/predict\"}[5m])) by (le)) * 1000",
+        "legendFormat": "p99",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 5,
+      "title": "Error Rate",
+      "type": "stat",
+      "gridPos": { "x": 16, "y": 0, "w": 4, "h": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [
+            { "color": "green", "value": null },
+            { "color": "red", "value": 0.01 }
+          ]}
+        }
+      },
+      "targets": [{
+        "expr": "1 - (sum(rate(fraud_api_requests_total{path=\"/predict\",status=\"200\"}[5m])) / sum(rate(fraud_api_requests_total{path=\"/predict\"}[5m])))",
+        "legendFormat": "Error %",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 6,
+      "title": "PayStream Mode",
+      "type": "stat",
+      "gridPos": { "x": 20, "y": 0, "w": 4, "h": 4 },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none", "textMode": "value_and_name" },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "options": { "0": { "text": "NORMAL", "color": "green" }, "1": { "text": "DRIFT", "color": "yellow" }, "2": { "text": "ATTACK", "color": "red" }, "3": { "text": "DEGRADED", "color": "gray" } }, "type": "value" }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [] }
+        }
+      },
+      "targets": [{
+        "expr": "paystream_mode",
+        "legendFormat": "{{mode_name}}",
+        "refId": "A"
+      }]
+    },
+    {
+      "id": 7,
+      "title": "Fraud Predictions Over Time",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 10 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Fraud" }, "properties": [{ "id": "color", "value": { "fixedColor": "red", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Legitimate" }, "properties": [{ "id": "color", "value": { "fixedColor": "green", "mode": "fixed" } }] }
+        ]
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(fraud_predictions_total{result=\"fraud\"}[1m])) * 60",
+          "legendFormat": "Fraud",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(fraud_predictions_total{result=\"legitimate\"}[1m])) * 60",
+          "legendFormat": "Legitimate",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "title": "API Latency Percentiles (ms)",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(fraud_api_request_duration_seconds_bucket{path=\"/predict\"}[5m])) by (le)) * 1000",
+          "legendFormat": "p50",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(fraud_api_request_duration_seconds_bucket{path=\"/predict\"}[5m])) by (le)) * 1000",
+          "legendFormat": "p95",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(fraud_api_request_duration_seconds_bucket{path=\"/predict\"}[5m])) by (le)) * 1000",
+          "legendFormat": "p99",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "title": "Fraud Probability Distribution",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 12, "w": 12, "h": 8 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 2, "fillOpacity": 20 } }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(fraud_probability_distribution_bucket{le=\"0.1\"}[5m]))",
+          "legendFormat": "prob < 0.1 (clearly legit)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(fraud_probability_distribution_bucket{le=\"0.5\"}[5m])) - sum(rate(fraud_probability_distribution_bucket{le=\"0.1\"}[5m]))",
+          "legendFormat": "prob 0.1-0.5 (uncertain)",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(rate(fraud_probability_distribution_bucket{le=\"+Inf\"}[5m])) - sum(rate(fraud_probability_distribution_bucket{le=\"0.5\"}[5m]))",
+          "legendFormat": "prob > 0.5 (fraud)",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "title": "PayStream Transactions Per Second",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 8 },
+      "options": { "tooltip": { "mode": "multi" }, "legend": { "displayMode": "list", "placement": "bottom" } },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "lineWidth": 2, "fillOpacity": 10 } }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(paystream_transactions_total[1m])) by (mode)",
+          "legendFormat": "{{mode}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "title": "Cumulative Prediction Counts",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 20, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "expr": "sum(fraud_predictions_total{result=\"fraud\"})",
+          "legendFormat": "Total Fraud Flagged",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(fraud_predictions_total{result=\"legitimate\"})",
+          "legendFormat": "Total Legit Passed",
+          "refId": "B"
+        },
+        {
+          "expr": "sum(paystream_fraud_missed_total)",
+          "legendFormat": "Fraud Missed (FN)",
+          "refId": "C"
+        },
+        {
+          "expr": "sum(paystream_false_positives_total)",
+          "legendFormat": "False Positives (FP)",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "title": "Request Rate by Endpoint",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 20, "w": 12, "h": 8 },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "custom": { "lineWidth": 2 } }
+      },
+      "targets": [
+        {
+          "expr": "sum(rate(fraud_api_requests_total[1m])) by (path, status)",
+          "legendFormat": "{{path}} [{{status}}]",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

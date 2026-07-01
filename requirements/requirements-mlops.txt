@@ -1,0 +1,4 @@
+feast[aws]==0.40.1
+apache-airflow==2.9.3
+evidently==0.4.30
+great-expectations==0.18.19

@@ -1,0 +1,31 @@
+# =============================================================================
+# terraform/ephemeral/terraform.tfvars.example
+# =============================================================================
+# Copy to terraform.tfvars and fill in your values.
+# NEVER commit terraform.tfvars to git.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
+
+# AWS region — must match persistent module
+region = "us-east-2"
+
+# NOTE: No IP address needed here.
+# Your public IP is fetched automatically at terraform apply time
+# via https://checkip.amazonaws.com — nothing sensitive in this file.
+
+# Where the auto-generated SSH private key is written on your Mac.
+# Auto-deleted on terraform destroy. Do not change this between apply and destroy.
+ssh_key_path = "~/.ssh/mlops-ephemeral-key.pem"
+
+# Max spot bid for t3.2xlarge.
+# On-demand price: ~$0.3328/hr
+# Typical spot price: ~$0.08–$0.12/hr in us-east-2
+# Check live price: https://aws.amazon.com/ec2/spot/instance-advisor/
+# Set high enough to avoid interruption during a work session (~2x current spot price is safe)
+spot_max_price = "0.12"
+
+# How long to wait for bootstrap.sh to complete.
+# Default 30m is generous. Actual time is ~15-20 min on first run.
+# Increase to 40m if your internet is slow (pip install downloads are large).
+bootstrap_timeout = "30m"

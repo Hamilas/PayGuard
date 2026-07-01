@@ -1,0 +1,12 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements/requirements-local.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ml/serving/fraud_api.py /app/fraud_api.py
+
+EXPOSE 8000
+
+CMD ["uvicorn", "fraud_api:app", "--host", "0.0.0.0", "--port", "8000"]

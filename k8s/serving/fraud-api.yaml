@@ -1,0 +1,106 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fraud-api
+  namespace: mlops
+  labels:
+    app: fraud-api
+    component: serving
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fraud-api
+  template:
+    metadata:
+      labels:
+        app: fraud-api
+        component: serving
+      annotations:
+        # Prometheus will auto-scrape this pod
+        prometheus.io/scrape: "true"
+        prometheus.io/port:   "8000"
+        prometheus.io/path:   "/metrics"
+    spec:
+      containers:
+      - name: fraud-api
+        image: python:3.11-slim
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          pip install fastapi uvicorn mlflow==2.15.0 \
+              xgboost==2.0.3 scikit-learn==1.5.1 \
+              pandas==2.2.2 numpy==1.26.4 \
+              boto3==1.35.0 psycopg2-binary==2.9.9 \
+              prometheus-client==0.20.0 \
+              -q --no-cache-dir && \
+          cd /app && python fraud_api.py
+        env:
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow.mlflow.svc.cluster.local:5000"
+        - name: MODEL_NAME
+          value: "fraud_detection_xgboost"
+        - name: MODEL_STAGE
+          value: "Staging"
+        - name: AWS_DEFAULT_REGION
+          value: "us-east-2"
+        ports:
+        - containerPort: 8000
+          name: http
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8000
+          initialDelaySeconds: 120   # wait for pip install
+          periodSeconds: 10
+          failureThreshold: 12
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 150
+          periodSeconds: 30
+          failureThreshold: 3
+      initContainers:
+      - name: copy-code
+        image: busybox:1.28
+        command: ['sh', '-c', 'cp /src/fraud_api.py /app/fraud_api.py']
+        volumeMounts:
+        - name: source-code
+          mountPath: /src
+        - name: app-code
+          mountPath: /app
+      volumes:
+      - name: source-code
+        configMap:
+          name: fraud-api-code
+      - name: app-code
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fraud-api
+  namespace: mlops
+  labels:
+    app: fraud-api
+spec:
+  type: NodePort
+  selector:
+    app: fraud-api
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 32002
+    name: http

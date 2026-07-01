@@ -1,0 +1,134 @@
+services:
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.14.1
+    container_name: payguard-mlflow
+    ports:
+      - "5050:5000"
+    volumes:
+      - mlflow_data:/mlflow
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:////mlflow/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  redis:
+    image: redis:7-alpine
+    container_name: payguard-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  trainer:
+    build:
+      context: .
+      dockerfile: Dockerfile.trainer
+    container_name: payguard-trainer
+    depends_on:
+      mlflow:
+        condition: service_healthy
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PARQUET_PATH=/app/ml/data/paysim_features.parquet
+      - MODEL_NAME=fraud_detection_xgboost
+    volumes:
+      - ./ml/data:/app/ml/data
+      - mlflow_data:/mlflow
+    command: >
+      sh -c "python ml/data/generate_local_sample.py &&
+             python ml/training/train_local.py"
+
+  fraud-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.fraud-api
+    container_name: payguard-api
+    ports:
+      - "8020:8000"
+    depends_on:
+      mlflow:
+        condition: service_healthy
+      trainer:
+        condition: service_completed_successfully
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MODEL_NAME=fraud_detection_xgboost
+      - MODEL_STAGE=Staging
+    volumes:
+      - mlflow_data:/mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/readiness')"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  paystream:
+    build:
+      context: .
+      dockerfile: Dockerfile.paystream
+    container_name: payguard-paystream
+    ports:
+      - "8021:8001"
+    depends_on:
+      fraud-api:
+        condition: service_healthy
+    environment:
+      - FRAUD_API_URL=http://fraud-api:8000
+      - MODE=normal
+
+  payguard-ui:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: payguard-ui
+    ports:
+      - "8023:80"
+    depends_on:
+      fraud-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: payguard-prometheus
+    ports:
+      - "9191:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      fraud-api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: payguard-grafana
+    ports:
+      - "3100:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  mlflow_data:
+  prometheus_data:
+  grafana_data:

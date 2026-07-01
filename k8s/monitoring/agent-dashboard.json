@@ -1,0 +1,120 @@
+{
+  "title": "MLOps Agent — Investigation Dashboard",
+  "uid": "mlops-agent-v1",
+  "tags": ["mlops", "agent", "llm"],
+  "timezone": "browser",
+  "refresh": "30s",
+  "time": {"from": "now-3h", "to": "now"},
+  "panels": [
+    {
+      "id": 1, "type": "stat", "title": "Total Investigations",
+      "gridPos": {"x":0,"y":0,"w":4,"h":4},
+      "targets": [{"expr": "sum(mlops_investigations_total)", "legendFormat": "Total"}],
+      "options": {"colorMode": "value", "graphMode": "area"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"},
+        "thresholds": {"steps": [{"color":"green","value":0}]}}}
+    },
+    {
+      "id": 2, "type": "stat", "title": "Cumulative LLM Cost ($)",
+      "gridPos": {"x":4,"y":0,"w":4,"h":4},
+      "targets": [{"expr": "mlops_investigation_cost_cumulative_dollars", "legendFormat": "Cost"}],
+      "options": {"colorMode": "value"},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD", "decimals": 4,
+        "color": {"mode": "thresholds"},
+        "thresholds": {"steps": [
+          {"color":"green","value":0},
+          {"color":"yellow","value":0.5},
+          {"color":"red","value":2.0}]}}}
+    },
+    {
+      "id": 3, "type": "stat", "title": "Phi3 Accuracy",
+      "gridPos": {"x":8,"y":0,"w":4,"h":4},
+      "targets": [{"expr": "mlops_phi3_accuracy * 100", "legendFormat": "Accuracy %"}],
+      "options": {"colorMode": "value"},
+      "fieldConfig": {"defaults": {"unit": "percent", "decimals": 0,
+        "color": {"mode": "thresholds"},
+        "thresholds": {"steps": [
+          {"color":"red","value":0},
+          {"color":"yellow","value":50},
+          {"color":"green","value":70}]}}}
+    },
+    {
+      "id": 4, "type": "stat", "title": "ChromaDB Incidents Stored",
+      "gridPos": {"x":12,"y":0,"w":4,"h":4},
+      "targets": [{"expr": "mlops_chromadb_incidents_stored", "legendFormat": "Incidents"}],
+      "options": {"colorMode": "value"},
+      "fieldConfig": {"defaults": {"color": {"mode": "thresholds"},
+        "thresholds": {"steps": [{"color":"blue","value":0}]}}}
+    },
+    {
+      "id": 5, "type": "stat", "title": "Last Investigation Cost ($)",
+      "gridPos": {"x":16,"y":0,"w":4,"h":4},
+      "targets": [{"expr": "sum(mlops_investigation_cost_dollars)", "legendFormat": "Last Cost"}],
+      "options": {"colorMode": "value"},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD", "decimals": 4,
+        "color": {"mode": "thresholds"},
+        "thresholds": {"steps": [
+          {"color":"green","value":0},
+          {"color":"yellow","value":0.03},
+          {"color":"red","value":0.10}]}}}
+    },
+    {
+      "id": 6, "type": "stat", "title": "Last Duration (s)",
+      "gridPos": {"x":20,"y":0,"w":4,"h":4},
+      "targets": [{"expr": "sum(mlops_investigation_duration_seconds)", "legendFormat": "Duration"}],
+      "options": {"colorMode": "value"},
+      "fieldConfig": {"defaults": {"unit": "s", "decimals": 0,
+        "color": {"mode": "thresholds"},
+        "thresholds": {"steps": [
+          {"color":"green","value":0},
+          {"color":"yellow","value":120},
+          {"color":"red","value":300}]}}}
+    },
+    {
+      "id": 7, "type": "piechart", "title": "Triage Path Distribution",
+      "gridPos": {"x":0,"y":4,"w":8,"h":8},
+      "targets": [{"expr": "mlops_triage_path_total", "legendFormat": "{{path}}"}],
+      "options": {"pieType": "pie", "displayLabels": ["name","percent"]}
+    },
+    {
+      "id": 8, "type": "bargauge", "title": "Investigations by Alert Type",
+      "gridPos": {"x":8,"y":4,"w":8,"h":8},
+      "targets": [{"expr": "sum by (alert_name) (mlops_investigations_total{status=\"completed\"})",
+        "legendFormat": "{{alert_name}}"}],
+      "options": {"orientation": "horizontal"},
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}}
+    },
+    {
+      "id": 9, "type": "timeseries", "title": "Investigation Cost Over Time",
+      "gridPos": {"x":16,"y":4,"w":8,"h":8},
+      "targets": [
+        {"expr": "mlops_investigation_cost_cumulative_dollars",
+         "legendFormat": "Cumulative Cost ($)"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "currencyUSD",
+        "color": {"mode": "fixed", "fixedColor": "green"}}}
+    },
+    {
+      "id": 10, "type": "timeseries", "title": "Investigation Rate",
+      "gridPos": {"x":0,"y":12,"w":12,"h":8},
+      "targets": [
+        {"expr": "sum(increase(mlops_investigations_total{status=\"completed\"}[5m]))",
+         "legendFormat": "Completed / 5m"},
+        {"expr": "sum(increase(mlops_investigations_total{status=\"failed\"}[5m]))",
+         "legendFormat": "Failed / 5m"}
+      ],
+      "fieldConfig": {"defaults": {"color": {"mode": "palette-classic"}}}
+    },
+    {
+      "id": 11, "type": "timeseries", "title": "Phi3 Accuracy Trend",
+      "gridPos": {"x":12,"y":12,"w":12,"h":8},
+      "targets": [
+        {"expr": "mlops_phi3_accuracy * 100", "legendFormat": "Phi3 Accuracy %"}
+      ],
+      "fieldConfig": {"defaults": {"unit": "percent", "min": 0, "max": 100,
+        "color": {"mode": "fixed", "fixedColor": "purple"}}}
+    }
+  ],
+  "schemaVersion": 38,
+  "version": 1
+}

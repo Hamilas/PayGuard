@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="440" viewBox="0 0 760 440" font-family="Inter, Arial, sans-serif">
+  <rect width="760" height="440" fill="#0a0e1a"/>
+  <defs>
+    <marker id="arrow2" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#f59e0b"/>
+    </marker>
+  </defs>
+
+  <rect x="60" y="20" width="640" height="90" rx="8" fill="rgba(15,23,42,0.8)" stroke="rgba(245,158,11,0.5)" stroke-width="1.5"/>
+  <text x="380" y="44" text-anchor="middle" fill="#f59e0b" font-size="13" font-weight="700">AWS (us-east-2): K3s on t3.2xlarge Spot instance</text>
+  <text x="380" y="66" text-anchor="middle" fill="#94a3b8" font-size="11">MLflow · Airflow · Feast+Redis · FastAPI fraud-api · Argo Rollouts canary</text>
+  <text x="380" y="86" text-anchor="middle" fill="#94a3b8" font-size="11">Prometheus + Grafana + Loki · Evidently AI drift · Great Expectations</text>
+
+  <line x1="380" y1="110" x2="380" y2="142" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow2)"/>
+  <text x="440" y="130" fill="#64748b" font-size="10">alert fires</text>
+
+  <rect x="60" y="145" width="640" height="180" rx="8" fill="rgba(15,23,42,0.8)" stroke="rgba(51,65,85,0.6)" stroke-width="1.5"/>
+  <text x="380" y="170" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="700">LangGraph 19-node Multi-LLM Agent</text>
+
+  <rect x="90" y="188" width="150" height="42" rx="6" fill="rgba(30,41,59,0.7)" stroke="rgba(51,65,85,0.5)"/>
+  <text x="165" y="206" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">Triage</text>
+  <text x="165" y="220" text-anchor="middle" fill="#64748b" font-size="9">Phi3 / Ollama (local, $0)</text>
+
+  <rect x="250" y="188" width="150" height="42" rx="6" fill="rgba(30,41,59,0.7)" stroke="rgba(51,65,85,0.5)"/>
+  <text x="325" y="206" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">Investigate / Research</text>
+  <text x="325" y="220" text-anchor="middle" fill="#64748b" font-size="9">Claude · Perplexity</text>
+
+  <rect x="410" y="188" width="150" height="42" rx="6" fill="rgba(30,41,59,0.7)" stroke="rgba(51,65,85,0.5)"/>
+  <text x="485" y="206" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">Data Science</text>
+  <text x="485" y="220" text-anchor="middle" fill="#64748b" font-size="9">Gemini</text>
+
+  <rect x="570" y="188" width="110" height="42" rx="6" fill="rgba(30,41,59,0.7)" stroke="rgba(51,65,85,0.5)"/>
+  <text x="625" y="206" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">Operator</text>
+  <text x="625" y="220" text-anchor="middle" fill="#64748b" font-size="9">GPT-5.4-mini</text>
+
+  <rect x="90" y="240" width="150" height="42" rx="6" fill="rgba(30,41,59,0.7)" stroke="rgba(51,65,85,0.5)"/>
+  <text x="165" y="258" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">Guardian</text>
+  <text x="165" y="272" text-anchor="middle" fill="#64748b" font-size="9">Claude (safety gate)</text>
+
+  <rect x="250" y="240" width="310" height="42" rx="6" fill="rgba(30,41,59,0.7)" stroke="rgba(51,65,85,0.5)"/>
+  <text x="405" y="258" text-anchor="middle" fill="#94a3b8" font-size="10" font-weight="600">Memory</text>
+  <text x="405" y="272" text-anchor="middle" fill="#64748b" font-size="9">ChromaDB RAG + Redis fast-path cache</text>
+
+  <line x1="380" y1="325" x2="380" y2="357" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow2)"/>
+
+  <rect x="60" y="360" width="640" height="50" rx="8" fill="rgba(15,23,42,0.8)" stroke="rgba(51,65,85,0.6)" stroke-width="1.5"/>
+  <text x="380" y="390" text-anchor="middle" fill="#94a3b8" font-size="11">PaySim transactions · S3 (5 buckets) · RDS PostgreSQL</text>
+</svg>

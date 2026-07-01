@@ -1,0 +1,101 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: fraud-api
+  namespace: mlops
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: fraud-api
+  template:
+    metadata:
+      labels:
+        app: fraud-api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      initContainers:
+      - name: copy-code
+        image: python:3.11-slim
+        command: ['sh', '-c', 'cp /src/fraud_api.py /app/fraud_api.py']
+        volumeMounts:
+        - name: source-code
+          mountPath: /src
+        - name: app-code
+          mountPath: /app
+      containers:
+      - name: fraud-api
+        image: python:3.11-slim
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          pip install fastapi uvicorn mlflow boto3 xgboost scikit-learn \
+              prometheus-client pandas numpy pyarrow psycopg2-binary \
+              -q --no-cache-dir
+          exec uvicorn fraud_api:app --host 0.0.0.0 --port 8000
+        workingDir: /app
+        env:
+        - name: MLFLOW_TRACKING_URI
+          value: "http://mlflow.mlflow.svc.cluster.local:5000"
+        - name: MODEL_STAGE
+          value: "Staging"
+        - name: AWS_DEFAULT_REGION
+          value: "us-east-2"
+        ports:
+        - name: http
+          containerPort: 8000
+        resources:
+          requests:
+            cpu: 200m
+            memory: 512Mi
+          limits:
+            cpu: 1000m
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /readiness
+            port: 8000
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          failureThreshold: 12
+        volumeMounts:
+        - name: app-code
+          mountPath: /app
+      volumes:
+      - name: source-code
+        configMap:
+          name: fraud-api-code
+      - name: app-code
+        emptyDir: {}
+  strategy:
+    canary:
+      steps:
+      - setWeight: 20     # Step 1: 20% traffic to canary
+      - pause: {duration: 30s}
+      - setWeight: 50     # Step 2: 50% traffic
+      - pause: {duration: 30s}
+      - setWeight: 100    # Step 3: full rollout
+      canaryMetadata:
+        labels:
+          role: canary
+      stableMetadata:
+        labels:
+          role: stable
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fraud-api-canary
+  namespace: mlops
+spec:
+  type: NodePort
+  selector:
+    app: fraud-api
+    role: canary
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 32005

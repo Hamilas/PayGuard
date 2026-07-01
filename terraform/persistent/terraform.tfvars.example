@@ -1,0 +1,15 @@
+# =============================================================================
+# terraform/persistent/terraform.tfvars.example
+# =============================================================================
+# Copy to terraform.tfvars and fill in your values.
+# NEVER commit terraform.tfvars to git.
+#
+#   cp terraform.tfvars.example terraform.tfvars
+# =============================================================================
+
+# AWS region — must match ephemeral module
+region = "us-east-2"
+
+# NOTE: No IP address needed here.
+# Your public IP is fetched automatically at terraform apply time
+# via https://checkip.amazonaws.com — nothing sensitive in this file.

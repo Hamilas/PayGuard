@@ -1,0 +1,80 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlops-webhook
+  namespace: agents
+  labels:
+    app: mlops-webhook
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlops-webhook
+  template:
+    metadata:
+      labels:
+        app: mlops-webhook
+    spec:
+      hostNetwork: false
+      containers:
+      - name: webhook
+        image: python:3.11-slim
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          pip install flask redis requests -q &&
+          python3 /app/webhook.py
+        ports:
+        - containerPort: 5001
+          name: http
+        env:
+        - name: WEBHOOK_PORT
+          value: "5001"
+        - name: REDIS_HOST
+          value: "10.43.86.87"
+        - name: PYTHONUNBUFFERED
+          value: "1"
+        volumeMounts:
+        - name: agent-code
+          mountPath: /app
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 6
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5001
+          initialDelaySeconds: 60
+          periodSeconds: 30
+      volumes:
+      - name: agent-code
+        hostPath:
+          path: /home/ec2-user/payguard-mlops/agents
+          type: Directory
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlops-webhook-svc
+  namespace: agents
+spec:
+  selector:
+    app: mlops-webhook
+  ports:
+  - port: 5001
+    targetPort: 5001
+    name: http
+  type: ClusterIP
